@@ -1,217 +1,761 @@
+<div align="center">
+
 # LyncxTeams / Baileys
 
-WhatsApp Web protocol toolkit for Node.js.
+A maintained, ESM-first Baileys fork for WhatsApp Multi-Device bots on Node.js.
 
-A maintained Baileys fork focused on Multi-Device automation, protocol helpers, session management, and a built-in MessageBuilder layer.
+[![npm version](https://img.shields.io/npm/v/@lyncxteams/baileys?label=NPM&color=303846)](https://www.npmjs.com/package/@lyncxteams/baileys)
+[![downloads](https://img.shields.io/npm/dt/@lyncxteams/baileys?label=Downloads&color=303846)](https://www.npmjs.com/package/@lyncxteams/baileys)
+[![Node.js](https://img.shields.io/badge/Node.js-20%2B-303846)](https://nodejs.org/)
+[![Module](https://img.shields.io/badge/Module-ESM-303846)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
+[![License](https://img.shields.io/badge/License-MIT-303846)](LICENSE)
+
+[Documentation](#documentation-map) · [Installation](#installation) · [Examples](#sending-messages) · [Issues](https://github.com/LyncxTeams/baileys/issues)
+
+</div>
+
+---
+
+## Project Overview
+
+`@lyncxteams/baileys` is an unofficial WhatsApp Multi-Device library for Node.js. It builds on the Baileys ecosystem and adds LyncxTeams-specific helpers, compatibility improvements, interactive messaging support, and an integrated MessageBuilder layer.
+
+The package combines the socket API, protocol utilities, LID-aware addressing, and message builders in one dependency. Use buttons, native-flow messages, carousels, and AIRich layouts without installing a separate builder package.
+
+> [!IMPORTANT]
+> This project is unofficial and is not affiliated with, authorized by, maintained by, sponsored by, or supported by WhatsApp or Meta. Use it responsibly and comply with WhatsApp's Terms of Service and applicable laws.
+
+> [!NOTE]
+> Advanced features may depend on the account, server-side rollout, device type, permissions, and current WhatsApp client version.
 
 ## Highlights
 
-- Multi-Device WhatsApp sessions with QR and pairing code support
-- ESM-first Node.js package for modern runtimes
-- Session storage helpers for filesystem, SQLite, Postgres, MySQL, MongoDB, Redis, and more
-- MessageBuilder utilities such as `Button`, `ButtonV2`, `Carousel`, and `AIRich`
-- Support for groups, communities, newsletters, business tooling, and calls
-- Extra protocol extensions and lower-level relay helpers
+| Feature | Description |
+|---|---|
+| Multi-Device | Connect to WhatsApp using the Baileys Multi-Device protocol. |
+| Pairing codes | Supports standard and custom 8-character pairing codes. |
+| Interactive buttons | Quick replies, URLs, copy, call, list/select, location, and other native-flow buttons. |
+| Integrated MessageBuilder | `Button`, `ButtonV2`, `Carousel`, `AIRich`, and `Toolkit` are included. |
+| Albums | Send multiple images or videos as one album message. |
+| Channels | Create, follow, update, react to, and fetch WhatsApp Channel data. |
+| Groups | Create groups, manage members, read metadata, update descriptions, and more. |
+| LID / PN addressing | Supports LID addressing and WhatsApp-provided PN/JID alternatives. |
+| Profile pictures | Fetch, update, and remove profile pictures. |
+| AI Rich | Experimental rich-response builder for text, code, tables, media, suggestions, and layouts. |
+| Voice and video calls | Make audio and video calls and share screens in an existing bot session. |
+| Database sessions | Store sessions in SQLite, PostgreSQL, MySQL, MongoDB, Redis, or NekoDB. |
+| ESM | ESM-first package requiring Node.js 20 or newer. Node.js 22+ is recommended. |
+
+## Documentation Map
+
+| I want to… | Use | Read |
+|---|---|---|
+| Log in and stay logged in | `useMultiFileAuthState`, database auth helpers | [Session storage](#session-storage) |
+| Log in without scanning a QR code | Pairing code | [Pairing codes](#pairing-code) |
+| Respond to incoming messages | `messages.upsert` | [Receiving messages](#receiving-messages) |
+| Send text, media, locations, and polls | `sock.sendMessage` | [Sending messages](#sending-messages) |
+| Send buttons, lists, and carousels | `Button`, `ButtonV2`, `Carousel` | [Interactive messages](#interactive-messages) |
+| Manage groups or communities | Group and community helpers | [Groups and communities](#groups-and-communities) |
+| Manage channels | Newsletter helpers | [Newsletters and channels](#newsletters-and-channels) |
+| Work with LID and PN identifiers | Addressing helpers | [LID / PN / JID addressing](#lid--pn--jid-addressing) |
+| Diagnose common problems | Troubleshooting guide | [Troubleshooting](#troubleshooting) |
+
+## Requirements
+
+- Node.js 20 or newer. This requirement is declared in `package.json` and enforced during installation.
+- Node.js 22 or newer is recommended; Node.js 24 is recommended for development and release workflows.
+- npm
+- A WhatsApp account for pairing and login
+
+Check your Node.js version:
+
+```bash
+node -v
+```
 
 ## Installation
+
+Install the package from npm:
 
 ```bash
 npm install @lyncxteams/baileys
 ```
 
-Node.js 20+ is required.
+This package is ESM-first. Use `import` syntax instead of `require()`.
 
-## Import
+A minimal `package.json` setup looks like this:
 
-```js
-import { default as makeWASocket, DisconnectReason, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion } from '@lyncxteams/baileys'
+```json
+{
+  "type": "module",
+  "dependencies": {
+    "@lyncxteams/baileys": "latest"
+  }
+}
 ```
 
-## Basic connection
+### Optional Media Packages
+
+The base installation does not include image or video processing libraries. This keeps the package smaller and lets you choose the `sharp` build that fits your project.
+
+```bash
+npm install sharp
+npm install fluent-ffmpeg
+```
+
+| Package | Used for |
+|---|---|
+| `sharp` | Preferred image processing library; generally the fastest option. |
+| `@napi-rs/image` | Fallback image processing library. |
+| `jimp` | Pure JavaScript fallback without a native build. |
+| `fluent-ffmpeg` | Video frame previews. |
+
+Sending text, buttons, polls, channel messages, and AI Rich messages does not require these packages. Media processing without an available image library throws `No image processing library available`. `Toolkit.resize` and `Toolkit.getMp4Preview` report the package they require when unavailable.
+
+Check for optional dependencies at runtime:
 
 ```js
-import { default as makeWASocket, DisconnectReason, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion } from '@lyncxteams/baileys'
+import { hasOptionalMedia } from '@lyncxteams/baileys'
 
-const { state, saveCreds } = await useMultiFileAuthState('auth_info')
+await hasOptionalMedia('sharp')
+await hasOptionalMedia('fluent-ffmpeg')
+```
 
-const sock = makeWASocket({
-  auth: state,
-  printQRInTerminal: true,
-  browser: Browsers.macOS('LyncxTeams Bot')
-})
+## Imports
 
-sock.ev.on('connection.update', async (update) => {
-  const { connection, lastDisconnect, qr } = update
+Import the socket:
 
-  if (qr) {
-    console.log('Scan the QR code with WhatsApp')
-  }
+```js
+import makeWASocket from '@lyncxteams/baileys'
+```
 
-  if (connection === 'close') {
-    const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
-    console.log('Connection closed due to', lastDisconnect?.error, 'reconnect:', shouldReconnect)
-    if (shouldReconnect) setTimeout(() => process.exit(0), 1000)
-  }
+Import additional utilities as needed:
 
-  if (connection === 'open') {
-    console.log('Connected')
-  }
-})
+```js
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  Button,
+  ButtonV2,
+  Carousel,
+  AIRich,
+  Toolkit,
+  MessageBuilder,
+  MB
+} from '@lyncxteams/baileys'
+```
 
+> [!NOTE]
+> MessageBuilder is integrated into this package. You do not need to install `baileys-mbuilder` separately.
+
+## Basic Connection
+
+```js
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason
+} from '@lyncxteams/baileys'
+import pino from 'pino'
+
+async function startSock() {
+  const { state, saveCreds } = await useMultiFileAuthState('./session')
+
+  const sock = makeWASocket({
+    auth: state,
+    logger: pino({ level: 'silent' })
+  })
+
+  sock.ev.on('creds.update', saveCreds)
+
+  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    if (connection === 'open') {
+      console.log('WhatsApp connected')
+    }
+
+    if (connection === 'close') {
+      const statusCode = lastDisconnect?.error?.output?.statusCode
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut
+
+      if (shouldReconnect) {
+        startSock()
+      } else {
+        console.log('Session logged out')
+      }
+    }
+  })
+
+  return sock
+}
+
+startSock()
+```
+
+### Retry and Pairing Options
+
+These options control handling of undecryptable messages, rejected sends, and pairing:
+
+| Option | Default | Description |
+|---|---:|---|
+| `maxMsgRetryCount` | `3` | Decryption retry requests per incoming message. |
+| `retryRequestDelayMs` | `250` | Delay before asking the sender to re-encrypt. |
+| `maxRetryQueueSize` | `64` | Maximum messages queued for retry at one time. |
+| `ackRetryDelayMs` | `750` | Delay before retrying after a retryable NACK. |
+| `maxAckRetryCount` | `3` | Retry attempts after a retryable NACK. |
+| `pairingCodeTimeoutMs` | `180000` | Validity period for one pairing code. |
+
+`maxRetryQueueSize` limits memory growth during bursts of undecryptable messages. Messages beyond the limit are acknowledged without retrying. Raising the limit does not improve message recovery; `retryRequestDelayMs` controls how quickly retry requests are sent.
+
+### Socket Options
+
+`makeWASocket` accepts the following options in addition to the standard Baileys options:
+
+| Option | Default | Description |
+|---|---|---|
+| `auth` | — | Required auth state from one of the session stores below. |
+| `logger` | Pino instance | Any Pino-compatible logger. |
+| `version` | Pinned WA Web version | Protocol version claimed by the socket. |
+| `browser` | `['Mac OS', 'Chrome', '14.4.1']` | Client name displayed in Linked Devices. |
+| `markOnlineOnConnect` | `true` | Set to `false` to preserve phone notification behavior. |
+| `syncFullHistory` | `true` | Request full history instead of only recent messages. |
+| `shouldSyncHistoryMessage` | `() => true` | Decide whether to save each history batch. |
+| `shouldIgnoreJid` | `() => false` | Drop events from matching JIDs before emitting them. |
+| `getMessage` | `async () => undefined` | Retrieve old messages so the socket can answer retry requests. |
+| `cachedGroupMetadata` | `async () => undefined` | Reuse a group metadata cache. |
+| `emitOwnEvents` | `true` | Emit events for actions performed by this device. |
+| `fireInitQueries` | `true` | Run initial queries for properties, blocklist, and privacy settings. |
+| `generateHighQualityLinkPreview` | `true` | Fetch larger link preview thumbnails. |
+| `linkPreviewImageThumbnailWidth` | `192` | Width of link preview thumbnails. |
+| `connectTimeoutMs` | `20000` | Timeout for the socket handshake. |
+| `keepAliveIntervalMs` | `15000` | WebSocket ping interval. |
+| `defaultQueryTimeoutMs` | `60000` | Timeout for IQ queries. |
+| `countryCode` | `'US'` | Country hint sent during registration. |
+| `patchMessageBeforeSending` | — | Last chance to rewrite messages before relaying. |
+| `enableAutoSessionRecreation` | `true` | Rebuild Signal sessions after repeated failures. |
+| `enableRecentMessageCache` | `true` | Cache recent outbound messages for retry requests. |
+| `appStateMacVerification` | `{ patch: false, snapshot: false }` | Configure app-state MAC verification. |
+| `waWebSocketUrl` | WA Web endpoint | Override the WebSocket URL. |
+| `customUploadHosts` | `[]` | Additional media upload hosts. |
+| `inlineSenderKeyDistribution` | `true` | Include sender-key distribution in group messages. Set `false` to send it separately. |
+| `transactionOpts` | `{ maxCommitRetries: 10, delayBetweenTriesMs: 3000 }` | App-state transaction retry policy. |
+| `options` | `{}` | Axios options for HTTP requests, such as proxy, timeout, and headers. |
+| `makeSignalRepository` | — | Override Signal protocol storage. |
+
+`getMessage` is important for retry handling. Without it, a receiver requesting a message retry may have nothing to return, and the message can remain stuck as “waiting for this message.” Connect it to your message storage.
+
+## Session Storage
+
+Auth state stores credentials and Signal keys. Losing the state means pairing again; exposing it may give someone access to your account. The included stores return the same `{ state, saveCreds }` shape.
+
+For every store, connect `saveCreds` to the `creds.update` event:
+
+```js
 sock.ev.on('creds.update', saveCreds)
 ```
 
-## Session storage
+### Multi-File (Default)
 
-This package provides several auth-state helpers. The simplest option is multi-file storage:
+Multi-file storage is dependency-free and convenient for one bot on one machine:
 
 ```js
 import { useMultiFileAuthState } from '@lyncxteams/baileys'
 
-const { state, saveCreds } = await useMultiFileAuthState('auth_info')
+const { state, saveCreds } = await useMultiFileAuthState('./session')
 ```
 
-Other supported storage patterns include:
+It writes many small files; thousands of pre-key files can be normal for a busy account. Do not delete them while the session is active, as doing so can break the session.
 
-- `useSingleFileAuthState()`
-- SQLite-backed auth stores
-- PostgreSQL, MySQL, MongoDB, Redis, and NekoDB integration
+### Single-File
 
-## Pairing codes
-
-Pairing codes let you connect without scanning a QR code.
+Single-file storage is easier to back up or move, but rewrites the full file when keys change and may slow down as the key collection grows:
 
 ```js
-const { pairingCode, expiresIn } = await sock.requestPairingCode('YOUR_PHONE_NUMBER')
-console.log(pairingCode, expiresIn)
+import { useSingleFileAuthState } from '@lyncxteams/baileys'
+
+const { state, saveCreds } = await useSingleFileAuthState('./session.json')
 ```
 
-You can also use custom pairing code flows when supported by the account and connection state.
+### SQLite
 
-## Receiving messages
+SQLite stores keys in a database and supports concurrent reads and larger key collections. It requires `better-sqlite3` v11, v12, or v13:
+
+```bash
+npm install better-sqlite3
+```
 
 ```js
-sock.ev.on('messages.upsert', ({ messages }) => {
+import { useSqliteAuthState } from '@lyncxteams/baileys'
+
+const { state, saveCreds } = await useSqliteAuthState({ dbPath: './session.db' })
+```
+
+You can pass an existing database connection:
+
+```js
+import Database from 'better-sqlite3'
+
+const database = new Database('./bot.db')
+const { state, saveCreds } = await useSqliteAuthState({ database })
+```
+
+The store creates `creds` and `signal_keys` tables on first use.
+
+### PostgreSQL, MySQL, MongoDB, and Redis
+
+These helpers work with existing database connections or connection details. Each stores data under a session name, so multiple accounts can share a database.
+
+```bash
+npm install pg mysql2 mongodb ioredis
+```
+
+```js
+import {
+  usePostgresAuthState,
+  useMySQLAuthState,
+  useMongoAuthState,
+  useRedisAuthState
+} from '@lyncxteams/baileys'
+
+const postgres = await usePostgresAuthState({
+  connectionString: 'postgres://user:pass@localhost:5432/bot'
+})
+
+const mysql = await useMySQLAuthState({
+  uri: 'mysql://user:pass@localhost:3306/bot'
+})
+
+const mongo = await useMongoAuthState({
+  uri: 'mongodb://localhost:27017',
+  dbName: 'bot'
+})
+
+const redis = await useRedisAuthState({
+  uri: 'redis://localhost:6379'
+})
+```
+
+Pass an existing connection to share it with the rest of your application. For example:
+
+```js
+import { Pool } from 'pg'
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const { state, saveCreds } = await usePostgresAuthState({ pool, session: 'sales-bot' })
+```
+
+`useMySQLAuthState` accepts `pool`; `useMongoAuthState` accepts `db` or `collection`; and `useRedisAuthState` accepts `client`. Both `node-redis` and `ioredis` are supported.
+
+All four helpers return `clearAuth()` and `close()`. They close connections they opened themselves, but leave caller-provided connections untouched. `useSqliteAuthState` also returns both methods.
+
+| Backend | Storage |
+|---|---|
+| PostgreSQL | `baileys_auth` table with `session`, `type`, `id`, and `value` fields. |
+| MySQL | `baileys_auth` table with `session`, `type`, `id`, and `value` fields. |
+| MongoDB | `baileys_auth` collection indexed by session, type, and id. |
+| Redis | One hash per key type, using `baileys_auth:<session>:<type>`. |
+
+Override the table, collection, or prefix with `table`, `collectionName`, or `prefix`. SQL writes are batched in a transaction, MongoDB uses `bulkWrite`, and Redis pipelines commands through `MULTI`.
+
+### NekoDB
+
+If your bot already stores state in NekoDB, use its auth helper:
+
+```js
+import { useNekoDBAuth } from '@lyncxteams/baileys'
+
+const { state, saveCreds } = await useNekoDBAuth({ endpoint: '...', token: '...' })
+```
+
+### Caching Signal Keys
+
+SQLite and multi-file stores read Signal keys from disk by default. For high-volume bots, wrap the auth state with an in-memory cache:
+
+```js
+import {
+  useMultiFileAuthState,
+  addMemoryCacheToAuthState
+} from '@lyncxteams/baileys'
+
+const { state, saveCreds } = await useMultiFileAuthState('./session')
+const cachedState = addMemoryCacheToAuthState(state)
+
+const sock = makeWASocket({ auth: cachedState })
+```
+
+This caches pre-keys and session state in memory to reduce disk I/O during busy message traffic.
+
+### Storing Chats and Messages
+
+Baileys does not include an internal database for chats, contacts, or message history by default. Store messages from the upsert event if your application needs them:
+
+```js
+sock.ev.on('messages.upsert', async ({ messages, type }) => {
+  if (type !== 'notify') return
+
   for (const msg of messages) {
-    if (msg.key.fromMe) continue
-
-    console.log('From:', msg.key.remoteJid)
-    console.log('Text:', msg.message?.conversation || msg.message?.extendedTextMessage?.text || '')
+    console.log('Received message:', msg.message)
+    // Save msg to your database here.
   }
 })
 ```
 
-## Sending messages
+## Pairing Code
+
+Instead of scanning a QR code, connect using an 8-character numeric pairing code:
 
 ```js
-await sock.sendMessage('1234567890@s.whatsapp.net', { text: 'Hello from LyncxTeams Baileys!' })
+import makeWASocket, { useMultiFileAuthState } from '@lyncxteams/baileys'
+import pino from 'pino'
+
+const { state, saveCreds } = await useMultiFileAuthState('./session')
+const sock = makeWASocket({
+  auth: state,
+  logger: pino({ level: 'silent' })
+})
+
+sock.ev.on('creds.update', saveCreds)
+
+if (!sock.authState.creds.registered) {
+  const phoneNumber = '6281234567890' // No plus sign, spaces, or dashes.
+
+  setTimeout(async () => {
+    const code = await sock.requestPairingCode(phoneNumber)
+    console.log(`Pairing code: ${code}`)
+  }, 3000)
+}
 ```
 
-Common payloads include:
+WhatsApp generates the code on its servers. Enter it on your phone under **Linked Devices → Link a Device → Link with phone number instead**.
+
+### One Code at a Time
+
+Only one pairing code can be active per session. Requesting another code expires the previous one.
+
+### Custom Pairing Code
+
+A custom format or generator can be supplied through the options accepted by `requestPairingCode`:
 
 ```js
-await sock.sendMessage(jid, { image: { url: 'https://example.com/image.jpg' }, caption: 'Image caption' })
-await sock.sendMessage(jid, { video: { url: 'https://example.com/video.mp4' }, caption: 'Video caption' })
-await sock.sendMessage(jid, { document: { url: 'https://example.com/file.pdf' }, fileName: 'file.pdf', mimetype: 'application/pdf' })
-await sock.sendMessage(jid, { location: { degreesLatitude: -6.2, degreesLongitude: 106.8 } })
-await sock.sendMessage(jid, { poll: { name: 'Favorite language?', options: ['JavaScript', 'Python', 'Go'] } })
+const code = await sock.requestPairingCode('6281234567890')
+```
+
+A custom code must be exactly eight characters.
+
+### Check Pairing State
+
+Check whether a session is registered before starting a full socket connection:
+
+```js
+import { useMultiFileAuthState } from '@lyncxteams/baileys'
+
+const { state } = await useMultiFileAuthState('./session')
+const isRegistered = state.creds?.registered ?? false
+
+console.log(`Is session registered? ${isRegistered}`)
+```
+
+## Receiving Messages
+
+Incoming messages arrive through the `messages.upsert` event:
+
+```js
+sock.ev.on('messages.upsert', async ({ messages, type }) => {
+  if (type !== 'notify') return
+
+  for (const msg of messages) {
+    if (!msg.message) continue
+
+    const sender = msg.key.remoteJid
+    const pushName = msg.pushName || 'User'
+    console.log(`Message from ${pushName} (${sender}):`, msg.message)
+  }
+})
 ```
 
 ## Events
 
-The socket emits a rich event stream:
+The `sock.ev` emitter provides hooks for connection state, messages, groups, and other updates.
+
+| Event | Description |
+|---|---|
+| `connection.update` | Connection status changes, such as connecting, open, or close. |
+| `creds.update` | Credentials change; persist them with `saveCreds`. |
+| `messages.upsert` | New messages received or sent. |
+| `messages.update` | Message status changes, such as delivered, read, or played. |
+| `messages.delete` | Messages deleted for everyone or cleared. |
+| `message-receipt.update` | Receipt updates for specific messages. |
+| `chats.upsert`, `chats.update`, `chats.delete` | Chat state changes, including archive, pin, mute, and delete. |
+| `contacts.upsert`, `contacts.update` | Contact details and profile name updates. |
+| `groups.upsert` | Group metadata loaded or a group created. |
+| `group-participants.update` | Members added, removed, promoted, or demoted. |
+| `groups.update` | Group metadata changes, including subject, description, and settings. |
+| `newsletter.update` | Channel updates, post reactions, and follower counts. |
+| `call` | Incoming VoIP voice or video calls. |
+| `presence.update` | Typing status and online/offline presence. |
+
+## LID / PN / JID Addressing
+
+WhatsApp uses more than one identifier for users:
+
+- **PN (Phone Number JID):** the traditional format, such as `6281234567890@s.whatsapp.net`.
+- **LID (Local Identifier):** a newer internal account identifier, such as `123456789@lid`.
+
+`@lyncxteams/baileys` supports LID-aware addressing and WhatsApp-provided PN/JID alternatives. Use the addressing helpers when your application needs to resolve an identifier.
+
+## Sending Messages
+
+### Text
 
 ```js
-sock.ev.on('connection.update', update => console.log(update))
-sock.ev.on('messaging-history.set', history => console.log(history))
-sock.ev.on('messages.upsert', ({ messages }) => console.log(messages))
-sock.ev.on('group-participants.update', event => console.log(event))
-sock.ev.on('presence.update', event => console.log(event))
-sock.ev.on('call.is-ongoing', event => console.log(event))
+await sock.sendMessage('6281234567890@s.whatsapp.net', {
+  text: 'Hello from Baileys!'
+})
 ```
 
-## MessageBuilder
-
-This fork includes MessageBuilder helpers directly in the package.
+### Mentions
 
 ```js
-import { Button, ButtonV2, Carousel, AIRich, MB } from '@lyncxteams/baileys'
-
-const msg = new Button().text('Choose an option')
-  .button('Open', 'open')
-  .button('Close', 'close')
-
-await sock.sendMessage(jid, msg.toMessage())
+await sock.sendMessage('123456789-group@g.us', {
+  text: 'Hello @6281234567890!',
+  mentions: ['6281234567890@s.whatsapp.net']
+})
 ```
 
-For richer interactive cards:
+### Forwarding
 
 ```js
-const rich = new MB.AIRich(sock).setTitle('LyncxTeams AI')
-rich.addText('Hello from the bot')
-await rich.send(jid)
+await sock.sendMessage('6281234567890@s.whatsapp.net', {
+  forward: messageObject
+})
 ```
 
-## Groups and communities
+### Images and Video
 
 ```js
-await sock.groupCreate('My Bot Group', [jid1, jid2])
-await sock.groupParticipantsUpdate(groupId, [jid], 'add')
-await sock.groupUpdateDescription(groupId, 'Updated description')
+await sock.sendMessage('6281234567890@s.whatsapp.net', {
+  image: { url: 'https://example.com/image.jpg' },
+  caption: 'Here is your image!'
+})
+
+await sock.sendMessage('6281234567890@s.whatsapp.net', {
+  video: { url: 'https://example.com/video.mp4' },
+  caption: 'Check out this video!'
+})
 ```
 
-Community helpers are available as part of the same socket API.
-
-## Newsletters and channels
+### Documents
 
 ```js
-const metadata = await sock.newsletterMetadata('jid', '123456789@newsletter')
-const newsletters = await sock.newsletterSubscribed()
-
-await sock.newsletterFollow('123456789@newsletter')
-await sock.newsletterReactMessage('123456789@newsletter', '175', '🔥')
+await sock.sendMessage('6281234567890@s.whatsapp.net', {
+  document: { url: 'https://example.com/document.pdf' },
+  mimetype: 'application/pdf',
+  fileName: 'document.pdf'
+})
 ```
 
-## Calls and VoIP
+### Location
 
 ```js
-const call = await sock.createCallLink({ name: 'Support' })
-await sock.rejectCall(call.callLink)
+await sock.sendMessage('6281234567890@s.whatsapp.net', {
+  location: { degreesLatitude: -6.2, degreesLongitude: 106.816666 }
+})
 ```
 
-VoIP helpers are also exposed for more advanced audio and video call flows.
-
-## LID, PN, and JID helpers
-
-The library includes helpers for working with newer WhatsApp address formats alongside older JID-based flows.
+### Polls
 
 ```js
-const contact = await sock.onWhatsApp('6281234567890@s.whatsapp.net')
-console.log(contact)
+await sock.sendMessage('6281234567890@s.whatsapp.net', {
+  poll: {
+    name: 'What is your favorite programming language?',
+    values: ['JavaScript', 'Python', 'TypeScript', 'Go']
+  }
+})
 ```
 
-## Private Relay and Web helpers
+## Interactive Messages
 
-Private Relay and WhatsApp Web inspection helpers are included when supported by the account and session.
+### Quick Replies and URLs
 
-## Notes and limits
+```js
+import { Button } from '@lyncxteams/baileys'
 
-> [!IMPORTANT]
-> This is an unofficial WhatsApp Web API library and is not affiliated with, authorized by, sponsored by, or supported by WhatsApp or Meta.
+const buttonMessage = new Button()
+  .setText('Choose an option below:')
+  .addQuickReply('Yes', 'yes_action')
+  .addQuickReply('No', 'no_action')
+  .addUrl('Visit Website', 'https://example.com')
+  .build()
 
-> [!NOTE]
-> Availability of advanced features depends on the account, server-side rollout, device type, permissions, and the current WhatsApp client state.
+await sock.sendMessage('6281234567890@s.whatsapp.net', buttonMessage)
+```
+
+### Buttons with Images
+
+```js
+import { Button } from '@lyncxteams/baileys'
+
+const buttonMessage = new Button()
+  .setImage({ url: 'https://example.com/image.jpg' })
+  .setCaption('Check this out!')
+  .addQuickReply('Buy Now', 'buy_now')
+  .build()
+
+await sock.sendMessage('6281234567890@s.whatsapp.net', buttonMessage)
+```
+
+### Selection Lists
+
+```js
+import { ButtonV2 } from '@lyncxteams/baileys'
+
+const listMessage = new ButtonV2()
+  .setTitle('Menu')
+  .setDescription('Select an item from the list')
+  .setButtonText('Open Menu')
+  .addSection('Main Section', [
+    { title: 'Option 1', rowId: 'opt_1', description: 'Description for option 1' },
+    { title: 'Option 2', rowId: 'opt_2', description: 'Description for option 2' }
+  ])
+  .build()
+
+await sock.sendMessage('6281234567890@s.whatsapp.net', listMessage)
+```
+
+### Carousels
+
+```js
+import { Carousel } from '@lyncxteams/baileys'
+
+const carousel = new Carousel()
+  .addCard({
+    image: { url: 'https://example.com/item1.jpg' },
+    title: 'Item 1',
+    body: 'Description for item 1',
+    nativeFlowButtons: [{
+      name: 'quick_reply',
+      buttonParamsJson: JSON.stringify({ display_text: 'Select Item 1', id: 'item_1' })
+    }]
+  })
+  .addCard({
+    image: { url: 'https://example.com/item2.jpg' },
+    title: 'Item 2',
+    body: 'Description for item 2',
+    nativeFlowButtons: [{
+      name: 'quick_reply',
+      buttonParamsJson: JSON.stringify({ display_text: 'Select Item 2', id: 'item_2' })
+    }]
+  })
+  .build()
+
+await sock.sendMessage('6281234567890@s.whatsapp.net', carousel)
+```
+
+### AIRich
+
+```js
+import { AIRich } from '@lyncxteams/baileys'
+
+const aiRichMessage = new AIRich()
+  .addText('Here is the analysis you requested:')
+  .addCode('console.log("Hello World");', 'javascript')
+  .build()
+
+await sock.sendMessage('6281234567890@s.whatsapp.net', aiRichMessage)
+```
+
+Interactive components may render differently across WhatsApp clients and platforms. Some advanced layouts are experimental and may depend on server-side rollout.
+
+## Albums
+
+Album utilities bundle multiple images or videos into a single album message. See the package's message helpers for the supported album payload and media requirements.
+
+## Newsletters and Channels
+
+Channel helpers support creating and interacting with WhatsApp Channels (Newsletters):
+
+```js
+const newsletter = await sock.newsletterCreate({
+  name: 'My Channel',
+  description: 'Channel description'
+})
+
+console.log('Created channel:', newsletter)
+```
+
+The API also includes helpers for following channels, reading metadata and updates, reacting to posts, managing polls and status, and channel administration. Feature availability depends on the account and WhatsApp rollout.
+
+## Groups and Communities
+
+```js
+const group = await sock.groupCreate('My Group', [
+  '6281234567890@s.whatsapp.net'
+])
+
+await sock.groupParticipantsUpdate(
+  'group_jid@g.us',
+  ['6281234567891@s.whatsapp.net'],
+  'add'
+)
+
+await sock.groupParticipantsUpdate(
+  'group_jid@g.us',
+  ['6281234567891@s.whatsapp.net'],
+  'remove'
+)
+```
+
+Group helpers cover participant management, metadata, descriptions, settings, and invite links. Community helpers are also available through the package API.
+
+## Additional APIs
+
+The package includes helpers for status messages and reactions, privacy and chat settings, labels and business catalogs, profile pictures, scheduled messages, account health signals, and call links. Advanced VoIP APIs support audio queues, video, screen sharing, and group calls. Availability can vary by account, client, and server-side rollout.
 
 ## Troubleshooting
 
-If you hit a problem:
+### Cannot read properties of undefined when replying
 
-- Make sure you are using Node.js 20 or newer
-- Confirm the auth folder is writable and persisted between restarts
-- Check the connection update logs for disconnect reasons and reconnect behavior
-- Re-create auth state if session data becomes stale
-- Use the relevant helper and feature gates before relying on experimental protocol features
+This can result from an invalid message object or missing message context. Pass the original message in the `quoted` option when sending a reply.
+
+### The bot answers in every group except one
+
+Check whether the bot was removed from the group, whether `shouldIgnoreJid` filters that JID, or whether group settings restrict bot messages.
+
+### Pairing code must be exactly 8 characters
+
+Custom pairing codes must contain exactly eight characters.
+
+### The pairing code appears, but the phone shows no prompt
+
+Confirm the phone has an internet connection and choose **Linked Devices → Link a Device → Link with phone number instead** in the official WhatsApp app.
+
+### Pairing request rejected with 409
+
+A pairing session may already be active or conflict with another request. Wait briefly, then retry.
+
+### Socket is required
+
+Pass an initialized socket instance to methods that require `sock`.
+
+### Buttons or AIRich render differently
+
+WhatsApp client versions vary in their support for native-flow and rich components. Update the mobile app and account for platform differences.
+
+### LID appears instead of a phone-number JID
+
+This is expected as WhatsApp transitions to LID addressing. Use the library's addressing helpers when you need to resolve identifiers.
+
+### Session logged out
+
+Credentials may have expired, been revoked from the phone, or been modified or deleted. Pair the device again to create a fresh session.
+
+## Found a Bug?
+
+Please open an issue in the [GitHub repository](https://github.com/LyncxTeams/baileys/issues).
+
+## Credits
+
+- **Project maintainers:** LyncxTeams
+- **Baileys / upstream:** Built on the Baileys ecosystem.
 
 ## License
 
-MIT
+MIT License. See [LICENSE](LICENSE) for details.

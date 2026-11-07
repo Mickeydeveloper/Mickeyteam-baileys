@@ -10,7 +10,7 @@ A maintained, ESM-first Baileys fork for WhatsApp Multi-Device bots on Node.js.
 [![Module](https://img.shields.io/badge/Module-ESM-303846)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
 [![License](https://img.shields.io/badge/License-MIT-303846)](LICENSE)
 
-[Documentation](#documentation-map) · [Installation](#installation) · [Examples](#sending-messages) · [Issues](https://github.com/Mickeyteam/baileys/issues)
+[Documentation](#documentation-map) · [Installation](#installation) · [Examples](#sending-messages) · [Issues](https://github.com/Mickeydeveloper/Mickey-Bailey/issues)
 
 </div>
 
@@ -88,6 +88,27 @@ A minimal `package.json` setup looks like this:
 ```json
 {
   "type": "module",
+
+VoIP runs on the socket that is already logged in. FFmpeg must be installed and available on `PATH` for audio/video file playback; set `ffmpegPath` if it is installed elsewhere.
+
+```js
+import { makeVoipClient } from '@mickeyteam/baileys'
+
+const voip = await makeVoipClient(sock, { ffmpegPath: 'ffmpeg' })
+const call = await voip.call('6281234567890', {
+  audioSource: './audio/intro.mp3',
+  playlist: ['./audio/intro.mp3', './audio/next.mp3'],
+  durationMs: 0
+})
+
+call.enqueue('./audio/another-track.mp3')
+call.skip()
+await call.end()
+voip.disconnect()
+```
+
+Video calls accept `video: true`, `videoSource`, and `videoPlaylist`. Screen-sharing mode can be started with `screenShare: true` or toggled on an active call, but the library does not automatically capture the machine's desktop; a video source/capture integration is still needed. VoIP behavior should be tested on the target platform and account.
+
   "dependencies": {
     "@mickeyteam/baileys": "latest"
   }
@@ -141,7 +162,8 @@ import makeWASocket, {
   AIRich,
   Toolkit,
   MessageBuilder,
-  MB
+  MB,
+  createSocketSupervisor
 } from '@mickeyteam/baileys'
 ```
 
@@ -153,42 +175,38 @@ import makeWASocket, {
 ```js
 import makeWASocket, {
   useMultiFileAuthState,
-  DisconnectReason
+  createSocketSupervisor
 } from '@mickeyteam/baileys'
 import pino from 'pino'
 
-async function startSock() {
-  const { state, saveCreds } = await useMultiFileAuthState('./session')
-
+const { state, saveCreds } = await useMultiFileAuthState('./session')
+const supervisor = createSocketSupervisor(() => {
   const sock = makeWASocket({
     auth: state,
     logger: pino({ level: 'silent' })
   })
-
   sock.ev.on('creds.update', saveCreds)
-
-  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
-    if (connection === 'open') {
-      console.log('WhatsApp connected')
-    }
-
-    if (connection === 'close') {
-      const statusCode = lastDisconnect?.error?.output?.statusCode
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut
-
-      if (shouldReconnect) {
-        startSock()
-      } else {
-        console.log('Session logged out')
-      }
-    }
-  })
-
   return sock
-}
+}, {
+  onUpdate({ connection, qr }) {
+    if (qr) console.log('Scan the QR code:', qr)
+    if (connection === 'open') console.log('WhatsApp connected')
+  },
+  onReconnect({ attempt, delayMs, statusCode }) {
+    console.log(`Reconnect ${attempt} in ${delayMs}ms (status ${statusCode ?? 'unknown'})`)
+  },
+  onAuthRequired({ statusCode }) {
+    console.error(`Session needs to be paired again (status ${statusCode})`)
+  },
+  onError(error) {
+    console.error('Socket creation failed:', error)
+  }
+})
 
-startSock()
+await supervisor.start()
 ```
+
+The supervisor retries transient disconnects with exponential backoff. It does not erase auth files or try to bypass a logout. If WhatsApp revokes the session, pair the device again, then call `supervisor.start()` with the refreshed auth state. Use `supervisor.stop()` during shutdown.
 
 ### Retry and Pairing Options
 
@@ -578,14 +596,15 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', {
 ```js
 import { Button } from '@mickeyteam/baileys'
 
-const buttonMessage = new Button()
-  .setText('Choose an option below:')
-  .addQuickReply('Yes', 'yes_action')
-  .addQuickReply('No', 'no_action')
+const jid = '6281234567890@s.whatsapp.net'
+const buttonMessage = new Button(sock)
+  .setTitle('Menu')
+  .setBody('Choose an option below:')
+  .addReply('Yes', 'yes_action')
+  .addReply('No', 'no_action')
   .addUrl('Visit Website', 'https://example.com')
-  .build()
 
-await sock.sendMessage('6281234567890@s.whatsapp.net', buttonMessage)
+await buttonMessage.send(jid)
 ```
 
 ### Buttons with Images
@@ -593,31 +612,30 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', buttonMessage)
 ```js
 import { Button } from '@mickeyteam/baileys'
 
-const buttonMessage = new Button()
-  .setImage({ url: 'https://example.com/image.jpg' })
-  .setCaption('Check this out!')
-  .addQuickReply('Buy Now', 'buy_now')
-  .build()
+const jid = '6281234567890@s.whatsapp.net'
+const buttonMessage = new Button(sock)
+  .setImage('https://example.com/image.jpg')
+  .setBody('Check this out!')
+  .addReply('Buy Now', 'buy_now')
 
-await sock.sendMessage('6281234567890@s.whatsapp.net', buttonMessage)
+await buttonMessage.send(jid)
 ```
 
 ### Selection Lists
 
 ```js
-import { ButtonV2 } from '@mickeyteam/baileys'
+import { Button } from '@mickeyteam/baileys'
 
-const listMessage = new ButtonV2()
+const jid = '6281234567890@s.whatsapp.net'
+const listMessage = new Button(sock)
   .setTitle('Menu')
-  .setDescription('Select an item from the list')
-  .setButtonText('Open Menu')
-  .addSection('Main Section', [
-    { title: 'Option 1', rowId: 'opt_1', description: 'Description for option 1' },
-    { title: 'Option 2', rowId: 'opt_2', description: 'Description for option 2' }
-  ])
-  .build()
+  .setBody('Select an item from the list')
+  .addSelection('Open Menu')
+  .makeSection('Main Section')
+  .makeRow('', 'Option 1', 'Description for option 1', 'opt_1')
+  .makeRow('', 'Option 2', 'Description for option 2', 'opt_2')
 
-await sock.sendMessage('6281234567890@s.whatsapp.net', listMessage)
+await listMessage.send(jid)
 ```
 
 ### Carousels
@@ -625,7 +643,8 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', listMessage)
 ```js
 import { Carousel } from '@mickeyteam/baileys'
 
-const carousel = new Carousel()
+const jid = '6281234567890@s.whatsapp.net'
+const carousel = new Carousel(sock)
   .addCard({
     image: { url: 'https://example.com/item1.jpg' },
     title: 'Item 1',
@@ -644,9 +663,7 @@ const carousel = new Carousel()
       buttonParamsJson: JSON.stringify({ display_text: 'Select Item 2', id: 'item_2' })
     }]
   })
-  .build()
-
-await sock.sendMessage('6281234567890@s.whatsapp.net', carousel)
+await carousel.send(jid)
 ```
 
 ### AIRich
@@ -654,12 +671,12 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', carousel)
 ```js
 import { AIRich } from '@mickeyteam/baileys'
 
-const aiRichMessage = new AIRich()
+const jid = '6281234567890@s.whatsapp.net'
+const aiRichMessage = new AIRich(sock)
   .addText('Here is the analysis you requested:')
-  .addCode('console.log("Hello World");', 'javascript')
-  .build()
+  .addCode('javascript', 'console.log("Hello World");')
 
-await sock.sendMessage('6281234567890@s.whatsapp.net', aiRichMessage)
+await aiRichMessage.send(jid)
 ```
 
 Interactive components may render differently across WhatsApp clients and platforms. Some advanced layouts are experimental and may depend on server-side rollout.
@@ -747,9 +764,19 @@ This is expected as WhatsApp transitions to LID addressing. Use the library's ad
 
 Credentials may have expired, been revoked from the phone, or been modified or deleted. Pair the device again to create a fresh session.
 
+## Development
+
+Run the unit tests with Node.js 20 or newer:
+
+```bash
+npm test
+```
+
+GitHub Actions runs the test suite on Node.js 20, 22, and 24.
+
 ## Found a Bug?
 
-Please open an issue in the [GitHub repository](https://github.com/Mickeyteam/baileys/issues).
+Please open an issue in the [GitHub repository](https://github.com/Mickeydeveloper/Mickey-Bailey/issues).
 
 ## Credits
 

@@ -13,6 +13,7 @@ export * from "./MessageBuilder/metaai.js";
 export * from "./MessageBuilder/bot-signature.js";
 export * from "./Voip/index.js";
 import baseMakeWASocket from './Socket/index.js';
+export type { WASocketConfig } from './Socket/index.js';
 import type { NewsletterStatusFetchOptions, NewsletterStatusList, NewsletterStatusSendOptions, NewsletterStatusSendResult, NewsletterStatusStanzaResult, NewsletterStatusUpdatesFetchOptions } from './Utils/newsletter-status.js';
 type BaseWASocket = ReturnType<typeof baseMakeWASocket>;
 export type WASocket = BaseWASocket & {

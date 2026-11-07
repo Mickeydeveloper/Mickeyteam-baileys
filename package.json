@@ -6,25 +6,22 @@
   "types": "lib/index.d.ts",
   "type": "module",
   "scripts": {
-    "preinstall": "node ./engine-requirements.js"
+    "preinstall": "node ./engine-requirements.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Mickeyteam/baileys.git"
+    "url": "git+https://github.com/Mickeydeveloper/Mickey-Bailey.git"
   },
   "files": [
     "lib/**/*",
     "WAProto/**/*",
     "engine-requirements.js",
     "LICENSE",
-    "NOTICE.md",
-    "PAIRING_AND_CALLS.md",
-    "PRIVATE_RELAY.md",
-    "WWEB.md",
-    "VOIP_CALLING.md"
+    "README.md"
   ],
   "keywords": [
     "automation",
@@ -38,7 +35,7 @@
     "whatsapp-bot",
     "whatsapp-web"
   ],
-  "homepage": "https://github.com/Mickeyteam/baileys#readme",
+  "homepage": "https://github.com/Mickeydeveloper/Mickey-Bailey#readme",
   "author": "Mickeyteam",
   "license": "MIT",
   "dependencies": {

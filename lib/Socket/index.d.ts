@@ -1,6 +1,13 @@
 /* LYNCX Baileys maintained distribution. Upstream notices and license are preserved in LICENSE and NOTICE.md. */
+import type { DEFAULT_CONNECTION_CONFIG } from '../Defaults/index.js';
+export type WASocketConfig = Partial<Omit<typeof DEFAULT_CONNECTION_CONFIG, 'auth' | 'logger' | 'browser'>> & {
+    auth?: object;
+    logger?: object;
+    browser?: string[];
+    [option: string]: unknown;
+};
 export default makeWASocket;
-declare function makeWASocket(config: any): {
+declare function makeWASocket(config: WASocketConfig): {
     communityQuery: (jid: any, type: any, content: any) => Promise<any>;
     communityMetadata: (jid: any) => Promise<{
         id: any;

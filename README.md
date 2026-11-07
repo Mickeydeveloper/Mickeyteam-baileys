@@ -1,16 +1,16 @@
 <div align="center">
 
-# LyncxTeams / Baileys
+# Mickeyteam / Baileys
 
 A maintained, ESM-first Baileys fork for WhatsApp Multi-Device bots on Node.js.
 
-[![npm version](https://img.shields.io/npm/v/@lyncxteams/baileys?label=NPM&color=303846)](https://www.npmjs.com/package/@lyncxteams/baileys)
-[![downloads](https://img.shields.io/npm/dt/@lyncxteams/baileys?label=Downloads&color=303846)](https://www.npmjs.com/package/@lyncxteams/baileys)
+[![npm version](https://img.shields.io/npm/v/@mickeyteam/baileys?label=NPM&color=303846)](https://www.npmjs.com/package/@mickeyteam/baileys)
+[![downloads](https://img.shields.io/npm/dt/@mickeyteam/baileys?label=Downloads&color=303846)](https://www.npmjs.com/package/@mickeyteam/baileys)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-303846)](https://nodejs.org/)
 [![Module](https://img.shields.io/badge/Module-ESM-303846)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
 [![License](https://img.shields.io/badge/License-MIT-303846)](LICENSE)
 
-[Documentation](#documentation-map) · [Installation](#installation) · [Examples](#sending-messages) · [Issues](https://github.com/LyncxTeams/baileys/issues)
+[Documentation](#documentation-map) · [Installation](#installation) · [Examples](#sending-messages) · [Issues](https://github.com/Mickeyteam/baileys/issues)
 
 </div>
 
@@ -18,7 +18,7 @@ A maintained, ESM-first Baileys fork for WhatsApp Multi-Device bots on Node.js.
 
 ## Project Overview
 
-`@lyncxteams/baileys` is an unofficial WhatsApp Multi-Device library for Node.js. It builds on the Baileys ecosystem and adds LyncxTeams-specific helpers, compatibility improvements, interactive messaging support, and an integrated MessageBuilder layer.
+`@mickeyteam/baileys` is an unofficial WhatsApp Multi-Device library for Node.js. It builds on the Baileys ecosystem and adds Mickeyteam-specific helpers, compatibility improvements, interactive messaging support, and an integrated MessageBuilder layer.
 
 The package combines the socket API, protocol utilities, LID-aware addressing, and message builders in one dependency. Use buttons, native-flow messages, carousels, and AIRich layouts without installing a separate builder package.
 
@@ -78,7 +78,7 @@ node -v
 Install the package from npm:
 
 ```bash
-npm install @lyncxteams/baileys
+npm install @mickeyteam/baileys
 ```
 
 This package is ESM-first. Use `import` syntax instead of `require()`.
@@ -89,7 +89,7 @@ A minimal `package.json` setup looks like this:
 {
   "type": "module",
   "dependencies": {
-    "@lyncxteams/baileys": "latest"
+    "@mickeyteam/baileys": "latest"
   }
 }
 ```
@@ -115,7 +115,7 @@ Sending text, buttons, polls, channel messages, and AI Rich messages does not re
 Check for optional dependencies at runtime:
 
 ```js
-import { hasOptionalMedia } from '@lyncxteams/baileys'
+import { hasOptionalMedia } from '@mickeyteam/baileys'
 
 await hasOptionalMedia('sharp')
 await hasOptionalMedia('fluent-ffmpeg')
@@ -126,7 +126,7 @@ await hasOptionalMedia('fluent-ffmpeg')
 Import the socket:
 
 ```js
-import makeWASocket from '@lyncxteams/baileys'
+import makeWASocket from '@mickeyteam/baileys'
 ```
 
 Import additional utilities as needed:
@@ -142,7 +142,7 @@ import makeWASocket, {
   Toolkit,
   MessageBuilder,
   MB
-} from '@lyncxteams/baileys'
+} from '@mickeyteam/baileys'
 ```
 
 > [!NOTE]
@@ -154,7 +154,7 @@ import makeWASocket, {
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason
-} from '@lyncxteams/baileys'
+} from '@mickeyteam/baileys'
 import pino from 'pino'
 
 async function startSock() {
@@ -257,7 +257,7 @@ sock.ev.on('creds.update', saveCreds)
 Multi-file storage is dependency-free and convenient for one bot on one machine:
 
 ```js
-import { useMultiFileAuthState } from '@lyncxteams/baileys'
+import { useMultiFileAuthState } from '@mickeyteam/baileys'
 
 const { state, saveCreds } = await useMultiFileAuthState('./session')
 ```
@@ -269,7 +269,7 @@ It writes many small files; thousands of pre-key files can be normal for a busy 
 Single-file storage is easier to back up or move, but rewrites the full file when keys change and may slow down as the key collection grows:
 
 ```js
-import { useSingleFileAuthState } from '@lyncxteams/baileys'
+import { useSingleFileAuthState } from '@mickeyteam/baileys'
 
 const { state, saveCreds } = await useSingleFileAuthState('./session.json')
 ```
@@ -283,7 +283,7 @@ npm install better-sqlite3
 ```
 
 ```js
-import { useSqliteAuthState } from '@lyncxteams/baileys'
+import { useSqliteAuthState } from '@mickeyteam/baileys'
 
 const { state, saveCreds } = await useSqliteAuthState({ dbPath: './session.db' })
 ```
@@ -313,7 +313,7 @@ import {
   useMySQLAuthState,
   useMongoAuthState,
   useRedisAuthState
-} from '@lyncxteams/baileys'
+} from '@mickeyteam/baileys'
 
 const postgres = await usePostgresAuthState({
   connectionString: 'postgres://user:pass@localhost:5432/bot'
@@ -360,7 +360,7 @@ Override the table, collection, or prefix with `table`, `collectionName`, or `pr
 If your bot already stores state in NekoDB, use its auth helper:
 
 ```js
-import { useNekoDBAuth } from '@lyncxteams/baileys'
+import { useNekoDBAuth } from '@mickeyteam/baileys'
 
 const { state, saveCreds } = await useNekoDBAuth({ endpoint: '...', token: '...' })
 ```
@@ -373,7 +373,7 @@ SQLite and multi-file stores read Signal keys from disk by default. For high-vol
 import {
   useMultiFileAuthState,
   addMemoryCacheToAuthState
-} from '@lyncxteams/baileys'
+} from '@mickeyteam/baileys'
 
 const { state, saveCreds } = await useMultiFileAuthState('./session')
 const cachedState = addMemoryCacheToAuthState(state)
@@ -403,7 +403,7 @@ sock.ev.on('messages.upsert', async ({ messages, type }) => {
 Instead of scanning a QR code, connect using an 8-character numeric pairing code:
 
 ```js
-import makeWASocket, { useMultiFileAuthState } from '@lyncxteams/baileys'
+import makeWASocket, { useMultiFileAuthState } from '@mickeyteam/baileys'
 import pino from 'pino'
 
 const { state, saveCreds } = await useMultiFileAuthState('./session')
@@ -445,7 +445,7 @@ A custom code must be exactly eight characters.
 Check whether a session is registered before starting a full socket connection:
 
 ```js
-import { useMultiFileAuthState } from '@lyncxteams/baileys'
+import { useMultiFileAuthState } from '@mickeyteam/baileys'
 
 const { state } = await useMultiFileAuthState('./session')
 const isRegistered = state.creds?.registered ?? false
@@ -499,7 +499,7 @@ WhatsApp uses more than one identifier for users:
 - **PN (Phone Number JID):** the traditional format, such as `6281234567890@s.whatsapp.net`.
 - **LID (Local Identifier):** a newer internal account identifier, such as `123456789@lid`.
 
-`@lyncxteams/baileys` supports LID-aware addressing and WhatsApp-provided PN/JID alternatives. Use the addressing helpers when your application needs to resolve an identifier.
+`@mickeyteam/baileys` supports LID-aware addressing and WhatsApp-provided PN/JID alternatives. Use the addressing helpers when your application needs to resolve an identifier.
 
 ## Sending Messages
 
@@ -576,7 +576,7 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', {
 ### Quick Replies and URLs
 
 ```js
-import { Button } from '@lyncxteams/baileys'
+import { Button } from '@mickeyteam/baileys'
 
 const buttonMessage = new Button()
   .setText('Choose an option below:')
@@ -591,7 +591,7 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', buttonMessage)
 ### Buttons with Images
 
 ```js
-import { Button } from '@lyncxteams/baileys'
+import { Button } from '@mickeyteam/baileys'
 
 const buttonMessage = new Button()
   .setImage({ url: 'https://example.com/image.jpg' })
@@ -605,7 +605,7 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', buttonMessage)
 ### Selection Lists
 
 ```js
-import { ButtonV2 } from '@lyncxteams/baileys'
+import { ButtonV2 } from '@mickeyteam/baileys'
 
 const listMessage = new ButtonV2()
   .setTitle('Menu')
@@ -623,7 +623,7 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', listMessage)
 ### Carousels
 
 ```js
-import { Carousel } from '@lyncxteams/baileys'
+import { Carousel } from '@mickeyteam/baileys'
 
 const carousel = new Carousel()
   .addCard({
@@ -652,7 +652,7 @@ await sock.sendMessage('6281234567890@s.whatsapp.net', carousel)
 ### AIRich
 
 ```js
-import { AIRich } from '@lyncxteams/baileys'
+import { AIRich } from '@mickeyteam/baileys'
 
 const aiRichMessage = new AIRich()
   .addText('Here is the analysis you requested:')
@@ -749,11 +749,11 @@ Credentials may have expired, been revoked from the phone, or been modified or d
 
 ## Found a Bug?
 
-Please open an issue in the [GitHub repository](https://github.com/LyncxTeams/baileys/issues).
+Please open an issue in the [GitHub repository](https://github.com/Mickeyteam/baileys/issues).
 
 ## Credits
 
-- **Project maintainers:** LyncxTeams
+- **Project maintainers:** Mickeyteam
 - **Baileys / upstream:** Built on the Baileys ecosystem.
 
 ## License

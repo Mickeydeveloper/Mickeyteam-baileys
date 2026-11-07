@@ -1,7 +1,7 @@
 {
-  "name": "@lyncxteams/baileys",
+  "name": "@mickeyteam/baileys",
   "version": "1.0.4",
-  "description": "LyncxTeams Baileys mods.",
+  "description": "Mickeyteam Baileys mods.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LyncxTeams/baileys.git"
+    "url": "git+https://github.com/Mickeyteam/baileys.git"
   },
   "files": [
     "lib/**/*",
@@ -38,8 +38,8 @@
     "whatsapp-bot",
     "whatsapp-web"
   ],
-  "homepage": "https://github.com/LyncxTeams/baileys#readme",
-  "author": "LyncxTeams",
+  "homepage": "https://github.com/Mickeyteam/baileys#readme",
+  "author": "Mickeyteam",
   "license": "MIT",
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",

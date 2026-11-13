@@ -208,6 +208,32 @@ await supervisor.start()
 
 The supervisor retries transient disconnects with exponential backoff. It does not erase auth files or try to bypass a logout. If WhatsApp revokes the session, pair the device again, then call `supervisor.start()` with the refreshed auth state. Use `supervisor.stop()` during shutdown.
 
+### Opt-in project banner
+
+You can show a startup banner in your app logs by enabling the socket's `branding` option:
+
+```js
+const sock = makeWASocket({
+  auth: state,
+  logger: pino({ level: 'info' }),
+  branding: true
+})
+```
+
+For a custom message:
+
+```js
+const sock = makeWASocket({
+  auth: state,
+  logger: pino({ level: 'info' }),
+  branding: {
+    message: 'THANKS FOR USING MY BOT. CONTACT: +1234567890'
+  }
+})
+```
+
+By default the banner is off to keep normal startup logs quiet.
+
 ### Retry and Pairing Options
 
 These options control handling of undecryptable messages, rejected sends, and pairing:

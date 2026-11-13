@@ -11,6 +11,27 @@ export interface HtmlAppReport {
     embeddedBytes: number
     problems: string[]
     warnings: string[]
+export declare const BRAND_BANNER_MESSAGE: string
+
+export declare function richSupported(): boolean
+export declare function htmlSupported(): boolean
+export declare function buildBrandBanner(customMessage?: string): string
+export declare function maybeLogBrandBanner(logger: {
+    info: (...args: any[]) => any
+} | undefined | null, config?: {
+    branding?: boolean | string | {
+        enabled?: boolean
+        message?: string
+    }
+    brandBanner?: boolean | string | {
+        enabled?: boolean
+        message?: string
+    }
+    brandMessage?: boolean | string | {
+        enabled?: boolean
+        message?: string
+    }
+}): boolean
 }
 
 export declare function checkHtmlApp(html: string, options?: {

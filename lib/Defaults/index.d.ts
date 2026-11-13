@@ -70,6 +70,10 @@ export namespace DEFAULT_CONNECTION_CONFIG {
     export let generateHighQualityLinkPreview: boolean;
     export let enableAutoSessionRecreation: boolean;
     export let enableRecentMessageCache: boolean;
+    export let branding: boolean | string | {
+        enabled?: boolean;
+        message?: string;
+    };
     export let options: {};
     export namespace appStateMacVerification {
         let patch: boolean;
